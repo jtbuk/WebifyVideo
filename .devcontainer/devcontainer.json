@@ -1,0 +1,13 @@
+{
+    "dockerFile": "dev.dockerfile",
+    "workspaceFolder": "/workspaces/WebifyVideo",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-dotnettools.csharp"
+        ]
+      }
+    },
+    "features": {},
+    "forwardPorts": []
+}
