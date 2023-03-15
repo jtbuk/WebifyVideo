@@ -1,44 +1,42 @@
-﻿namespace VideoProcessor
-{
-    internal class Program
+﻿using VideoShared.NetWrappers;
+
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Environment.CurrentDirectory)
+    .AddJsonFile("appsettings.json")
+    .AddUserSecrets<Program>()
+    .AddEnvironmentVariables()
+    .Build();
+
+var host = Host.CreateDefaultBuilder()
+    .ConfigureServices((context, services) =>
     {
-        static void Main(string[] args)
-        {   
-            //TODO - Implement Upload Process
-            // - Create IAC for Storage Queue
-            // - Place Video On Storage Queue
-            // - Read from Storage Queue
-            // - Process Video
-            // - Place into SMB or Blob Storage
-                        
-            var profile = "main"; //main or high
-            var bitrate = 720;
-            var audioBitrate = 360;
-            var resolution = "1920x1080";
-                        
-            var ffmpegArguments = string.Join(" ", new string[] {
-                "-i Sample/sample.mp4",
-                "-vcodec h264",
-                "-acodec aac",
-                "-force_key_frames expr:gte(t,n_forced*5)",
-                $"-profile:v {profile}",
-                "-preset veryfast",
-                "-crf 22",
-                $"-maxrate {bitrate}",
-                $"-bufsize {bitrate * 2}",
-                $"-ab {audioBitrate}",
-                $"-s {resolution}",
-                "-movflags +faststart",
-                //Must be last
-                "Output/sample.m3u8"
-            });
+        var encoderSection = configuration.GetSection("EncoderOptions");
+        services
+            .AddOptions<EncoderOptions>()
+            .Bind(encoderSection)
+            .Validate((options) => !string.IsNullOrEmpty(options.TempPath));
 
-            Console.WriteLine($"ffmpeg args {ffmpegArguments}");
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddTransient<IEncodingService, EncodingService>();        
+        services.AddHostedService(serviceProvider =>
+        {
+            var encodingService = serviceProvider.GetRequiredService<EncodingService>();
+            var videoPollerLogger = serviceProvider.GetRequiredService<ILogger<VideoPoller>>();
+            var storageConnection = configuration.GetConnectionString("StorageAccount")!;
+            
+            var storageQueueName = "raw-videos";
+            var blobStorageContainerName = "raw-videos";
 
-            using var proc = new Process();
-            proc.StartInfo.FileName = "/usr/bin/ffmpeg";
-            proc.StartInfo.Arguments = ffmpegArguments;
-            proc.Start();
-        }
-    }
-}
+            return new VideoPoller (
+                new PeriodicTimerWrapper(new PeriodicTimer(TimeSpan.FromSeconds(10))),
+                encodingService,
+                videoPollerLogger,
+                new (new QueueClient(storageConnection, storageQueueName)),
+                new (new BlobServiceClient(storageConnection)),                
+                blobStorageContainerName
+            );
+        });
+    })
+    .Build();
+
+await host.RunAsync();

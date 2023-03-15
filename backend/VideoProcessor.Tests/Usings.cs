@@ -1,0 +1,12 @@
+global using NUnit.Framework;
+global using Microsoft.Extensions.Logging;
+global using Moq;
+global using VideoProcessor.Features.Encoding;
+global using Azure;
+global using Azure.Storage.Blobs;
+global using Azure.Storage.Queues;
+global using Azure.Storage.Queues.Models;
+global using System.Text.Json;
+global using VideoShared;
+global using VideoShared.AzureSdkWrappers;
+global using VideoShared.NetWrappers;
