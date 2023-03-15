@@ -9,7 +9,7 @@ graph TD;
     rawStorageQueue[[Raw Files To Process Queue]];
     rawBlobStorage[(Raw File Blob Storage)];
     
-    webReadyStorage[[Web Ready File Blob Storage]]
+    webReadyStorage[(Web Ready File Blob Storage)]
     cdn[Content Delivery Network]
         
     uploadApi-- 1. Upload Raw Files --- rawBlobStorage;
